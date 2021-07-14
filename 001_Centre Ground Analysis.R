@@ -5,8 +5,6 @@ library(gridExtra)
 library(ggthemes)
 
 
-setwd("") #Set to your home directory
-
 ###########################
 
 ## Hypotheticals
@@ -45,21 +43,15 @@ greyplot2(skewed, "(iv) Skewed") -> plots[[4]]
 grid.arrange(grobs= lapply(plots, "+", theme(plot.margin=margin(10,10,10,10))),
              nrow=1) -> hypotheticals
 
-ggsave(filename = "Hypotheticals.pdf",
-       plot = hypotheticals,
-       bg = 'transparent',
-       family = 'Times',
-       width=8, height=2)
 
 ###########################
 
-## BESIP analysis
-
-BES <- read_csv("") # Download data from https://www.britishelectionstudy.com/data-object/wave-20-of-the-2014-2023-british-election-study-internet-panel/
-
+## British Election Studies Analysis
 ## Process variables
 
-BES <- BES[BES$polAttention %in% c('5','6','7','8','9','Pay a great deal of attention'),] # Limit to those paying some attention to politics
+BES <- read_csv("BES2020.csv") # https://www.britishelectionstudy.com/data-object/wave-20-of-the-2014-2023-british-election-study-internet-panel/
+
+# BES <- BES[BES$polAttention %in% c('5','6','7','8','9','Pay a great deal of attention'),] # Limit to those paying some attention to politics
 
 BES$mt_LR_scale <- ifelse(BES$lr_scale == 'Left', 0, ifelse(BES$lr_scale == 'Right', 10, BES$lr_scale))
 BES$mt_al_scale <- ifelse(BES$al_scale == 'Left', 0, ifelse(BES$al_scale == 'Right', 10, BES$al_scale))
@@ -118,7 +110,9 @@ BES %>%
   as_survey_design(weights = wt) -> BES_wt
 
 
-## Graphs
+###########################
+
+## Graph functions
 
 groupedsummary <- function(varName) {
   BES_wt %>%
@@ -142,20 +136,18 @@ greyplot <- function(DF, CAPTION, YLIMITS = NULL, XBREAKS = NULL, XLABS = NULL) 
           axis.title = element_blank())
 }
 
+## Graphs
 
 groupedsummary("as.integer(mt_LR_scale)") -> LRSCALE
 groupedsummary("mt_LRself") -> LRSELF
 plots <- vector("list", length = 2)
-greyplot(LRSCALE, "(i) Left-Right index", c(0,0.2), c(0,10), c('Left','Right')) -> plots[[1]]
-greyplot(LRSELF, "(ii) Left-Right self placement", c(0,0.2), c(0,10), c('Left','Right')) -> plots[[2]]
+greyplot(LRSCALE, "(i) Left-Right index", c(0,0.25), c(0,10), c('Left','Right')) -> plots[[1]]
+greyplot(LRSELF, "(ii) Left-Right self placement", c(0,0.25), c(0,10), c('Left','Right')) -> plots[[2]]
 grid.arrange(grobs= lapply(plots, "+", theme(plot.margin=margin(10,10,10,10))),
              ncol=2) -> LR
 
-ggsave(filename = "Left-Right.pdf",
-       plot = LR,
-       bg = 'transparent',
-       family = 'Times',
-       width=8, height=2)
+NROW(BES$mt_LRself[BES$mt_LRself == "Don't know"]) # 6499 said don't know, 21%
+NROW(BES$mt_LR_scale[is.na(BES$mt_LR_scale)]) # 3596 are NA, i.e. 11% (and that is cumulative across 5 items)
 
 
 groupvar <- c("mt_lr1", "mt_lr2", "mt_lr3", "mt_lr4", "mt_lr5")
@@ -172,43 +164,6 @@ grid.arrange(grobs= lapply(plots, "+", theme(plot.margin=margin(10,10,10,10))),
              nrow=3, ncol=2) -> LRQS
 
 
-
-groupedsummary("mt_taxspend") -> TAXSPEND
-groupedsummary("mt_redistSelf") -> REDIST
-groupedsummary("mt_deficitReduce") -> DEFICIT
-plots <- vector("list", length = 3)
-greyplot(TAXSPEND, "(i) Government should increase taxes and spending", c(0,0.23), c(0,10), c('Agree','Disagree')) -> plots[[1]]
-greyplot(REDIST, "(ii) Government should try to make incomes equal", c(0,0.23), c(0,10), c('Agree','Disagree')) -> plots[[2]]
-greyplot(DEFICIT, "(iii) Reducing government deficits is...", XBREAKS = c(1,4), XLABS = c('Unnecessary','Necessary')) -> plots[[3]]
-grid.arrange(grobs= lapply(plots, "+", theme(plot.margin=margin(10,10,10,10))),
-             ncol=2) -> SPEND
-
-ggsave(filename = "Fiscal.pdf",
-       plot = SPEND,
-       bg = 'transparent',
-       family = 'Times',
-       width=8, height=4)
-
-
-
-groupedsummary("mt_immigSelf") -> IMMIGRATION
-groupedsummary("mt_immigCultural") -> IMMICULTURE
-groupedsummary("mt_immigEcon") -> IMMIECON
-plots <- vector("list", length = 3)
-greyplot(IMMICULTURE, "(i) Immigration enriches cultural life", c(0,0.2), c(0,6), c('Agree','Disagree')) -> plots[[1]]
-greyplot(IMMIECON, "(ii) Immigration enriches the economy", c(0,0.2), c(0,6), c('Agree','Disagree')) -> plots[[2]]
-greyplot(IMMIGRATION, "(iii) Immigration should be...", XBREAKS = c(0,10), XLABS = c('Increased','Reduced')) -> plots[[3]]
-grid.arrange(grobs= lapply(plots, "+", theme(plot.margin=margin(10,10,10,10))),
-             ncol=2) -> IMMI
-
-ggsave(filename = "Immigration.pdf",
-       plot = IMMI,
-       bg = 'transparent',
-       family = 'Times',
-       width=8, height=4)
-
-
-
 groupvar <- c("mt_al1", "mt_al3", "mt_al4", "mt_al5", "mt_al2")
 Output <- lapply(groupvar, groupedsummary)
 plots <- vector("list", length = 5)
@@ -222,27 +177,32 @@ for (i in 1:5){
 grid.arrange(grobs= lapply(plots, "+", theme(plot.margin=margin(10,10,10,10))),
              nrow=3, ncol=2) -> ALQS
 
-ggsave(filename = "LA-Questions.pdf",
-       plot = ALQS,
-       bg = 'transparent',
-       family = 'Times',
-       width=8, height=6)
+
+groupedsummary("mt_taxspend") -> TAXSPEND
+groupedsummary("mt_redistSelf") -> REDIST
+groupedsummary("mt_deficitReduce") -> DEFICIT
+plots <- vector("list", length = 3)
+greyplot(TAXSPEND, "(i) Government should increase taxes and spending", c(0,0.25), c(0,10), c('Agree','Disagree')) -> plots[[1]]
+greyplot(REDIST, "(ii) Government should try to make incomes equal", c(0,0.25), c(0,10), c('Agree','Disagree')) -> plots[[2]]
+greyplot(DEFICIT, "(iii) Reducing government deficits is...", XBREAKS = c(1,4), XLABS = c('Unnecessary','Necessary')) -> plots[[3]]
+grid.arrange(grobs= lapply(plots, "+", theme(plot.margin=margin(10,10,10,10))),
+             ncol=2) -> SPEND
 
 
-groupedsummary("mt_al_scale") -> ALSCALE
-greyplot(ALSCALE, "(i) Authoritarian-Libertarian scale", c(0,0.2), c(0,10), c('Authoritarian','Libertarian')) -> LIBAUTH
-
+groupedsummary("mt_immigSelf") -> IMMIGRATION
+groupedsummary("mt_immigCultural") -> IMMICULTURE
+groupedsummary("mt_immigEcon") -> IMMIECON
+plots <- vector("list", length = 3)
+greyplot(IMMICULTURE, "(i) Immigration enriches cultural life", c(0,0.25), c(0,6), c('Agree','Disagree')) -> plots[[1]]
+greyplot(IMMIECON, "(ii) Immigration enriches the economy", c(0,0.25), c(0,6), c('Agree','Disagree')) -> plots[[2]]
+greyplot(IMMIGRATION, "(iii) Immigration should be...", XBREAKS = c(0,10), XLABS = c('Increased','Reduced')) -> plots[[3]]
+grid.arrange(grobs= lapply(plots, "+", theme(plot.margin=margin(10,10,10,10))),
+             ncol=2) -> IMMI
 
 
 ###########################
 
-BES %>%
-  select(starts_with('mt_')) %>%
-  mutate_all(as.numeric) -> BES_cor
-
-ggcorrplot::ggcorrplot(cor(BES_cor[10:14], use = "pairwise.complete.obs"), lab = TRUE)
-cor.test(BES_cor$mt_LR_scale, BES_cor$mt_LRself)
-
+##### Moderation
 
 BES %>%
   mutate(across(.cols = c('mt_lr1','mt_lr2','mt_lr3','mt_lr4','mt_lr5'),
@@ -289,30 +249,47 @@ for (i in 1:5) {
 # Across issues, the average of number people choosing either of the most extreme answers is 27.56%, 
 # compared to only 18.9% choosing the middle value
 
+
+###########################
+
+#### Constraint
+
+BES %>%
+  mutate(LRanswers = as.factor(paste0(mt_lr1,mt_lr2,mt_lr3,mt_lr4,mt_lr5))) %>%
+  mutate(LRInconstant = ifelse((grepl("0", LRanswers) & grepl("4", LRanswers)), 1, 0)) %>%
+  select(wt, LRInconstant) %>%
+  as_survey_design(weights = wt) %>%
+  summarise(proportion=survey_mean(LRInconstant)) # 3% of people agree strongly and disagree strongly
+
+BES %>%
+  mutate(LRanswers = as.factor(paste0(mt_lr1,mt_lr2,mt_lr3,mt_lr4,mt_lr5))) %>%
+  mutate(LRInconstant_weak = ifelse((grepl("0|1", LRanswers) & grepl("3|4", LRanswers)), 1, 0)) %>%
+  select(wt, LRInconstant_weak) %>%
+  as_survey_design(weights = wt) %>%
+  summarise(proportion=survey_mean(LRInconstant_weak)) # 27% agree and disagree
+
+# Inter-item correlation
+jtools::svycor(~ mt_lr1 + mt_lr2 + mt_lr3 + mt_lr4+ mt_lr5, design = BES_wt, na.rm = TRUE, digits = 7)
+# All statistically significant
+# Range from 0.36 to 0.65
+
+# Chronbach alpha = 0.92, c = 0.47
+mean(.4717809,0.6462653,0.5461447,0.3639732,0.5716939,0.5909460,0.5702302,0.6262279,0.4595475,0.4778243) -> c
+mean(svyvar(~ mt_lr1 + mt_lr2 + mt_lr3 + mt_lr4+ mt_lr5, design = BES_wt, na.rm = TRUE)) -> v
+(5*c)/(v+(4*c))
+
+# PCA
+summary(prcomp(~ mt_lr1 + mt_lr2 + mt_lr3 + mt_lr4 + mt_lr5, data = BES, center = TRUE, scale = TRUE)) # singular value decomposition
+summary(princomp(~ mt_lr1 + mt_lr2 + mt_lr3 + mt_lr4 + mt_lr5, data = BES, center = TRUE, scale = TRUE)) # eigendecomposition of correlation matrix
+# 63% of variance explained by one underlying dimension
+
+# Can't check intertemporal stability because left-right values are only asked once of each person!
+
+
+
 ###########################
 
 ## YouGov
-
-NATOSAFE <- tibble(measure = c(1,2,3,NA),
-                  proportion = c(57,16,3,24)) #https://yougov.co.uk/topics/politics/survey-results/daily/2019/12/04/15d13/3
-NATOWEST <- tibble(measure = c(1,2,3,NA),
-                  proportion = c(66,4,6,24)) #https://yougov.co.uk/topics/politics/survey-results/daily/2019/12/04/15d13/2
-SUPNATO <- tibble(measure = c(1,2,3,4,5,NA),
-                  proportion = c(37,28,12,2,1,20)) #https://yougov.co.uk/topics/international/survey-results/daily/2019/12/04/15d13/1
-plots <- vector("list", length = 3)
-greyplot(NATOSAFE, "(i) Role of NATO in defending the West", c(0,67), c(1,3), c("Important","Unimportant")) -> plots[[1]]
-greyplot(NATOWEST, "(ii) Does NATO make Britain...", c(0,67), c(1,3), c("More safe","Less safe")) -> plots[[2]]
-greyplot(SUPNATO, "(iii) Britain's membership of NATO", c(0,44), c(1,5), c("Support","Oppose")) -> plots[[3]]
-grid.arrange(grobs= lapply(plots, "+", theme(plot.margin=margin(10,10,10,10))),
-             ncol=2) -> NATO
-
-ggsave(filename = "NATO.pdf",
-       plot = NATO,
-       bg = 'transparent',
-       family = 'Times',
-       width=8, height=4)
-
-
 
 FAVRUSSIA <- tibble(measure = c(1,2,3,4,NA),
                  proportion = c(1,9,34,41,16)) #https://docs.cdn.yougov.com/3ce71typvy/Eurotrack_May21_Topline_Favourability_Israel.pdf
@@ -327,27 +304,16 @@ greyplot(FAVIRAN, "(iii) Views of Iran", c(0,44), c(1,4), c("Favourable","Unfavo
 grid.arrange(grobs= lapply(plots, "+", theme(plot.margin=margin(10,10,10,10))),
              ncol=2) -> FAV
 
-ggsave(filename = "Enemies.pdf",
-       plot = FAV,
-       bg = 'transparent',
-       family = 'Times',
-       width=8, height=4)
 
-
-HOWIMPNATO <- tibble(measure = c(1,2,3,4,NA),
-                     proportion = c(55,24,3,2,16)) #https://d25d2506sfb94s.cloudfront.net/cumulus_uploads/document/0jkjn1d99l/YGC%20GB%20attitudes%20to%20NATO%20%26%20natsec%20Dec%2019.pdf
-HOWIMPUNSC <- tibble(measure = c(1,2,3,4,NA),
-                     proportion = c(55,24,4,2,16)) #https://d25d2506sfb94s.cloudfront.net/cumulus_uploads/document/0jkjn1d99l/YGC%20GB%20attitudes%20to%20NATO%20%26%20natsec%20Dec%2019.pdf
-HOWIMPWTO <- tibble(measure = c(1,2,3,4,NA),
-                     proportion = c(51,28,2,3,16)) #https://d25d2506sfb94s.cloudfront.net/cumulus_uploads/document/0jkjn1d99l/YGC%20GB%20attitudes%20to%20NATO%20%26%20natsec%20Dec%2019.pdf
-HOWIMPG20 <- tibble(measure = c(1,2,3,4,NA),
-                    proportion = c(39,34,7,2,21)) #https://d25d2506sfb94s.cloudfront.net/cumulus_uploads/document/0jkjn1d99l/YGC%20GB%20attitudes%20to%20NATO%20%26%20natsec%20Dec%2019.pdf
-plots <- vector("list", length = 4)
-greyplot(HOWIMPNATO, "(i) Membership of NATO", c(0,56), c(1,4), c("Important","Unimportant")) -> plots[[1]]
-greyplot(HOWIMPUNSC, "(ii) Membership of the UN Security Council", c(0,56), c(1,4), c("Important","Unimportant")) -> plots[[2]]
-greyplot(HOWIMPWTO, "(iii) Membership of the WTO", c(0,56), c(1,4), c("Important","Unimportant")) -> plots[[3]]
-greyplot(HOWIMPG20, "(iv) Membership of the G20", c(0,56), c(1,4), c("Important","Unimportant")) -> plots[[4]]
+NATOSAFE <- tibble(measure = c(1,2,3,NA),
+                  proportion = c(57,16,3,24)) #https://yougov.co.uk/topics/politics/survey-results/daily/2019/12/04/15d13/3
+NATOWEST <- tibble(measure = c(1,2,3,NA),
+                  proportion = c(66,4,6,24)) #https://yougov.co.uk/topics/politics/survey-results/daily/2019/12/04/15d13/2
+SUPNATO <- tibble(measure = c(1,2,3,4,5,NA),
+                  proportion = c(37,28,12,2,1,20)) #https://yougov.co.uk/topics/international/survey-results/daily/2019/12/04/15d13/1
+plots <- vector("list", length = 3)
+greyplot(NATOSAFE, "(i) NATO's role in defending the West is...", c(0,67), c(1,3), c("Important","Unimportant")) -> plots[[1]]
+greyplot(NATOWEST, "(ii) Does NATO make Britain...", c(0,67), c(1,3), c("More safe","Less safe")) -> plots[[2]]
+greyplot(SUPNATO, "(iii) Britain's membership of NATO", c(0,44), c(1,5), c("Support","Oppose")) -> plots[[3]]
 grid.arrange(grobs= lapply(plots, "+", theme(plot.margin=margin(10,10,10,10))),
-             nrow=2, ncol = 2) -> HOWIMP
-
-
+             ncol=2) -> NATO
