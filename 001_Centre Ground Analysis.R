@@ -43,12 +43,20 @@ greyplot2(skewed, "(iv) Skewed") -> plots[[4]]
 grid.arrange(grobs= lapply(plots, "+", theme(plot.margin=margin(10,10,10,10))),
              nrow=1) -> hypotheticals
 
+ggsave(filename = "/Users/matteo/Downloads/Centre ground/Hypotheticals.pdf",
+       plot = hypotheticals,
+       bg = 'transparent',
+       family = 'Times',
+       width=8, height=2)
+
 
 
 ###########################
 
 ## British Election Studies Analysis
 ## Process variables
+
+setwd("/Users/matteo/Downloads/Centre ground")
 
 BES <- read_csv("BES2020.csv") # https://www.britishelectionstudy.com/data-object/wave-20-of-the-2014-2023-british-election-study-internet-panel/
 
@@ -173,6 +181,13 @@ for (i in 1:5) {
 
 BES %>%
   mutate(LRanswers = as.factor(paste0(mt_lr1,mt_lr2,mt_lr3,mt_lr4,mt_lr5))) %>%
+  mutate(LRInconstant = ifelse((grepl("0", LRanswers) & grepl("4", LRanswers)), 1, 0)) %>%
+  select(wt, LRInconstant) %>%
+  as_survey_design(weights = wt) %>%
+  summarise(proportion=survey_mean(LRInconstant)) # 3% of people agree strongly and disagree strongly
+
+BES %>%
+  mutate(LRanswers = as.factor(paste0(mt_lr1,mt_lr2,mt_lr3,mt_lr4,mt_lr5))) %>%
   mutate(LRInconstant_weak = ifelse((grepl("0|1", LRanswers) & grepl("3|4", LRanswers)), 1, 0)) %>%
   select(wt, LRInconstant_weak) %>%
   as_survey_design(weights = wt) %>%
@@ -195,7 +210,7 @@ mean(svyvar(~ mt_lr1 + mt_lr2 + mt_lr3 + mt_lr4+ mt_lr5, design = BES_wt, na.rm 
 summary(prcomp(~ mt_lr1 + mt_lr2 + mt_lr3 + mt_lr4 + mt_lr5, data = BES, center = TRUE, scale = TRUE)) # singular value decomposition
 summary(princomp(~ mt_lr1 + mt_lr2 + mt_lr3 + mt_lr4 + mt_lr5, data = BES, center = TRUE, scale = TRUE)) # eigen decomposition of correlation matrix
 
-# Can't check intertemporal stability because left-right values are only asked once of each person
+# Can't check intertemporal stability because left-right values are only asked once of each person!
 
 
 
@@ -236,9 +251,14 @@ greyplot(LRSELF, "(ii) Left-Right self placement", c(0,0.25), c(0,10), c('Left',
 grid.arrange(grobs= lapply(plots, "+", theme(plot.margin=margin(10,10,10,10))),
              ncol=2) -> LR
 
+ggsave(filename = "/Users/matteo/Downloads/Centre ground/Left-Right.pdf",
+       plot = LR,
+       bg = 'transparent',
+       family = 'Times',
+       width=8, height=2)
+
 NROW(BES$mt_LRself[BES$mt_LRself == "Don't know"]) # 6499 said don't know, 21%
 NROW(BES$mt_LR_scale[is.na(BES$mt_LR_scale)]) # 3596 are NA, i.e. 11% (and that is cumulative across 5 items)
-
 
 
 groupvar <- c("mt_lr1", "mt_lr2", "mt_lr3", "mt_lr4", "mt_lr5")
@@ -265,6 +285,12 @@ greyplot(DEFICIT, "(iii) Reducing government deficits is...", XBREAKS = c(1,4), 
 grid.arrange(grobs= lapply(plots, "+", theme(plot.margin=margin(10,10,10,10))),
              ncol=2) -> SPEND
 
+ggsave(filename = "/Users/matteo/Downloads/Centre ground/Fiscal.pdf",
+       plot = SPEND,
+       bg = 'transparent',
+       family = 'Times',
+       width=8, height=4)
+
 
 
 groupedsummary("mt_immigSelf") -> IMMIGRATION
@@ -276,6 +302,12 @@ greyplot(IMMIECON, "(ii) Immigration enriches the economy", c(0,0.25), c(0,6), c
 greyplot(IMMIGRATION, "(iii) Immigration should be...", XBREAKS = c(0,10), XLABS = c('Increased','Reduced')) -> plots[[3]]
 grid.arrange(grobs= lapply(plots, "+", theme(plot.margin=margin(10,10,10,10))),
              ncol=2) -> IMMI
+
+ggsave(filename = "/Users/matteo/Downloads/Centre ground/Immigration.pdf",
+       plot = IMMI,
+       bg = 'transparent',
+       family = 'Times',
+       width=8, height=4)
 
 
 
@@ -294,6 +326,12 @@ for (i in 1:5){
 }
 grid.arrange(grobs= lapply(plots, "+", theme(plot.margin=margin(10,10,10,10))),
              nrow=3, ncol=2) -> ALQS
+
+ggsave(filename = "/Users/matteo/Downloads/Centre ground/LA-Questions.pdf",
+       plot = ALQS,
+       bg = 'transparent',
+       family = 'Times',
+       width=8, height=6)
 
 
 
@@ -334,7 +372,13 @@ greyplot(FAVRUSSIA, "(i) Views of Russia", c(0,44), c(1,4), c("Favourable","Unfa
 greyplot(FAVCHINA, "(ii) Views of China", c(0,44), c(1,4), c("Favourable","Unfavourable")) -> plots[[2]]
 greyplot(FAVIRAN, "(iii) Views of Iran", c(0,44), c(1,4), c("Favourable","Unfavourable")) -> plots[[3]]
 grid.arrange(grobs= lapply(plots, "+", theme(plot.margin=margin(10,10,10,10))),
-             ncol=2) -> FAV
+             ncol=3) -> FAV
+
+ggsave(filename = "/Users/matteo/Downloads/Centre ground/Enemies.pdf",
+       plot = FAV,
+       bg = 'transparent',
+       family = 'Times',
+       width=8, height=2)
 
 
 NATOSAFE <- tibble(measure = c(1,2,3,NA),
@@ -344,8 +388,14 @@ NATOWEST <- tibble(measure = c(1,2,3,NA),
 SUPNATO <- tibble(measure = c(1,2,3,4,5,NA),
                   proportion = c(37,28,12,2,1,20)) #https://yougov.co.uk/topics/international/survey-results/daily/2019/12/04/15d13/1
 plots <- vector("list", length = 3)
-greyplot(NATOSAFE, "(i) NATO's role in defending the West is...", c(0,67), c(1,3), c("Important","Unimportant")) -> plots[[1]]
+greyplot(NATOSAFE, "(i) NATO's role defending the West is...", c(0,67), c(1,3), c("Important","Unimportant")) -> plots[[1]]
 greyplot(NATOWEST, "(ii) Does NATO make Britain...", c(0,67), c(1,3), c("More safe","Less safe")) -> plots[[2]]
 greyplot(SUPNATO, "(iii) Britain's membership of NATO", c(0,44), c(1,5), c("Support","Oppose")) -> plots[[3]]
 grid.arrange(grobs= lapply(plots, "+", theme(plot.margin=margin(10,10,10,10))),
-             ncol=2) -> NATO
+             ncol=3) -> NATO
+
+ggsave(filename = "/Users/matteo/Downloads/Centre ground/NATO.pdf",
+       plot = NATO,
+       bg = 'transparent',
+       family = 'Times',
+       width=8, height=2)
