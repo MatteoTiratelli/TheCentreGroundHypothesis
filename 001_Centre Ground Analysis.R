@@ -5,9 +5,9 @@ library(gridExtra)
 library(ggthemes)
 
 
-###########################
+########################### Hypotheticals #####
 
-## Hypotheticals
+
 
 normcore <- tibble(measure = 1:19,
                    proportion = c(0,0,0,0.01,0.08,0.21,0.35,0.6,0.85,0.99,
@@ -51,7 +51,7 @@ ggsave(filename = "/Users/matteo/Downloads/Centre ground/Hypotheticals.pdf",
 
 
 
-###########################
+########################### BES data #######
 
 ## British Election Studies Analysis
 ## Process variables
@@ -103,7 +103,8 @@ BES %>%
                                "Don't know" = 55),
                 .names = "mt_{col}")) %>%
   mutate(across(.cols = c("mt_lr1", "mt_lr2", "mt_lr3", "mt_lr4", "mt_lr5"),
-                .fns = ~na_if(., 55))) -> BES
+                .fns = ~na_if(., 55))) %>%
+  mutate(mt_lrSUM = mt_lr1 + mt_lr2 + mt_lr3 + mt_lr4 + mt_lr5) -> BES
 
 BES %>%
   mutate(across(.cols = c("al1", "al2", "al3", "al4", "al5"),
@@ -124,9 +125,9 @@ BES %>%
 
 
 
-###########################
+########################### Moderation ##### 
 
-##### Moderation
+
 
 BES %>%
   mutate(across(.cols = c('mt_lr1','mt_lr2','mt_lr3','mt_lr4','mt_lr5'),
@@ -139,29 +140,53 @@ BES %>%
                 .names = "abs_{col}")) -> BES
 
 BES %>%
-  select(wt, mt_LRself, starts_with("abs_")) %>%
+  select(wt, mt_LRself, mt_LR_scale, starts_with("abs_")) %>%
   as_survey_design(weights = wt) -> BES_wt2
 
 varlist <- c("abs_mt_lr1","abs_mt_lr2","abs_mt_lr3","abs_mt_lr4","abs_mt_lr5")
 
 for (i in 1:5) {
   BES_wt2 %>%
-    filter(mt_LRself != 5) %>%
+    filter(mt_LRself %in% c(4,5,6)) %>%
     group_by_(varlist[i]) %>%
     summarize(proportion=survey_mean(),
               total=survey_total()) %>% print()
   BES_wt2 %>%
-    filter(mt_LRself == 5) %>%
+    filter(!(mt_LRself %in% c(4,5,6))) %>%
     group_by_(varlist[i]) %>%
     summarize(proportion=survey_mean(),
               total=survey_total()) %>% print()
 }
 
-mean(c(22.8,15.5,19.2,14.1,19.7))
-mean(c(30.7,17.4,23.5,16.2,21.7))
+mean(c(18.1,26.9,21.3,34.1,22.1))
+mean(c(25.5,30.7,27.8,38.3,24.3))
 
 # Average percent of (weighted) respondents giving the most extreme answers to the 5 individual L-R questions
 # is 25.92% for people who self-identified as at the middle (5), vs 27.98% for everyone else
+# is 24.5% for people who self-id as 4-6, vs 29.32% for everyone else
+
+for (i in 1:5) {
+  BES_wt2 %>%
+    filter(mt_LR_scale %in% c(4,5,6)) %>%
+    group_by_(varlist[i]) %>%
+    summarize(proportion=survey_mean(),
+              total=survey_total()) %>% print()
+  BES_wt2 %>%
+    filter(!(mt_LR_scale %in% c(4,5,6))) %>%
+    group_by_(varlist[i]) %>%
+    summarize(proportion=survey_mean(),
+              total=survey_total()) %>% print()
+}
+
+mean(c(12.9,5.89,4.07,7.90,6.09))
+mean(c(24.2,33.4,29.2,41.8,26.5))
+
+# Average percent of (weighted) respondents giving the most extreme answers to 5 individual L-R questions
+# is 7.37% for people who score 5-7 on LR scale, vs 31.02% for everyone else
+
+## So people who are placed in the middle on scale ARE more likely to have moderate opinions
+
+
 
 for (i in 1:5) {
   BES_wt2 %>%
@@ -175,9 +200,9 @@ for (i in 1:5) {
 
 
 
-###########################
+########################### Constraint #### 
 
-#### Constraint
+
 
 BES %>%
   mutate(LRanswers = as.factor(paste0(mt_lr1,mt_lr2,mt_lr3,mt_lr4,mt_lr5))) %>%
@@ -195,28 +220,94 @@ BES %>%
 
 
 # Inter-item correlation: Range from 0.36 to 0.65
-jtools::svycor(~ mt_lr1 + mt_lr2 + mt_lr3 + mt_lr4+ mt_lr5, design = BES_wt, na.rm = TRUE, digits = 7) # All statistically significant
+jtools::svycor(~ mt_lr1 + mt_lr2 + mt_lr3 + mt_lr4 + mt_lr5 + as.numeric(mt_LR_scale), design = BES_wt, na.rm = TRUE, digits = 7) # All statistically significant
+
 
 BES %>%
   select(mt_lr1, mt_lr2, mt_lr3, mt_lr4, mt_lr5) %>%
   cor(method = "spearman", use = "complete.obs")
 
-# Chronbach alpha = 0.92, c = 0.47
-mean(.4717809,0.6462653,0.5461447,0.3639732,0.5716939,0.5909460,0.5702302,0.6262279,0.4595475,0.4778243) -> c
-mean(svyvar(~ mt_lr1 + mt_lr2 + mt_lr3 + mt_lr4+ mt_lr5, design = BES_wt, na.rm = TRUE)) -> v
-(5*c)/(v+(4*c))
+
+# Chronbach Alpha
+svycralpha(~ mt_lr1 + mt_lr2 + mt_lr3 + mt_lr4+ mt_lr5, design = BES_wt, na.rm = TRUE) # = 0.8478048
+
+svyvar(~ mt_lr1 + mt_lr2 + mt_lr3 + mt_lr4 + mt_lr5, design = BES_wt, na.rm = TRUE)
+svyvar(~ mt_lrSUM, design = BES_wt, na.rm = TRUE)
+(5/(5-1))*(1-(sum(1.40236,0.87472,1.02976,1.12532,1.00510)/16.899)) # = 0.847812
+
+BES %>% 
+  drop_na(mt_lr1, mt_lr2, mt_lr3, mt_lr4, mt_lr5, wt) %>% 
+  select(mt_lr1, mt_lr2, mt_lr3, mt_lr4, mt_lr5, wt) -> temp
+cov.wt(temp %>% select(mt_lr1, mt_lr2, mt_lr3, mt_lr4, mt_lr5), wt = temp$wt)
+as.matrix(svyvar(~ mt_lr1 + mt_lr2 + mt_lr3 + mt_lr4 + mt_lr5, design = BES_wt, na.rm = TRUE)) # slightly different covariance scores but tiny differences
+mean(0.5225220,0.7766192,0.5425829,0.6860809,0.5863010,0.6741218,0.4321194,0.5346750,0.4675232,0.5081726) -> c
+mean(1.40236,0.87472,1.02976,1.12532,1.00510) -> v
+(5*c)/(v+(4*c)) # = 0.7480741
+
 
 # PCA: 63% of variance explained by one underlying dimension
 summary(prcomp(~ mt_lr1 + mt_lr2 + mt_lr3 + mt_lr4 + mt_lr5, data = BES, center = TRUE, scale = TRUE)) # singular value decomposition
-summary(princomp(~ mt_lr1 + mt_lr2 + mt_lr3 + mt_lr4 + mt_lr5, data = BES, center = TRUE, scale = TRUE)) # eigen decomposition of correlation matrix
+summary(princomp(~ mt_lr1 + mt_lr2 + mt_lr3 + mt_lr4 + mt_lr5, data = BES)) # eigen decomposition of correlation matrix
 
 # Can't check intertemporal stability because left-right values are only asked once of each person!
 
 
+# Do ideological moderates have moderate policy preferences? Seemingly yes...
 
-###########################
+BES %>%
+  mutate(mt_taxspend = abs(mt_taxspend-5)) %>%
+  mutate(extreme = as.numeric(ifelse(mt_taxspend >= 4,1,0)),
+         mt_LR_scale = as.numeric(mt_LR_scale),
+         wt = as.numeric(wt)) %>%
+  select(extreme, mt_LR_scale, wt) %>%
+  xtabs(wt ~ extreme + mt_LR_scale, data = .) -> table2
+as.data.frame(prop.table((table2),2)) %>%
+  filter(extreme == 1) %>%
+  mutate(var = "increaseTaxAndSpend") -> moderationgraph
 
-## Graph functions
+BES %>%
+  mutate(cutsTooFarNHS = na_if(cutsTooFarNHS, "Don't know")) %>%
+  mutate(cutsTooFarNHS = ifelse(cutsTooFarNHS %in% c("Gone much too far",'Not gone nearly far enough'), 2,
+                                ifelse(cutsTooFarNHS %in% c('Gone too far','Not gone far enough'), 1,
+                                       ifelse(cutsTooFarNHS %in% c('About right'), 0, cutsTooFarNHS)))) %>%
+  mutate(extreme = as.numeric(ifelse(as.numeric(cutsTooFarNHS) == 2, 1,0)),
+         mt_LR_scale = as.numeric(mt_LR_scale),
+         wt = as.numeric(wt)) %>%
+  select(extreme, mt_LR_scale, wt) %>%
+  xtabs(wt ~ extreme + mt_LR_scale, data = .) -> table2
+as.data.frame(prop.table((table2),2)) %>%
+  filter(extreme == 1) %>%
+  mutate(var = "cutsTooFarNHS") %>%
+  bind_rows(moderationgraph, .) -> moderationgraph
+
+BES %>%
+  mutate(cutsTooFarNational = na_if(cutsTooFarNational, "Don't know")) %>%
+  mutate(cutsTooFarNational = ifelse(cutsTooFarNational %in% c("Gone much too far",'Not gone nearly far enough'), 2,
+                                ifelse(cutsTooFarNational %in% c('Gone too far','Not gone far enough'), 1,
+                                       ifelse(cutsTooFarNational %in% c('About right'), 0, cutsTooFarNational)))) %>%
+  mutate(extreme = as.numeric(ifelse(as.numeric(cutsTooFarNational) == 2, 1,0)),
+         mt_LR_scale = as.numeric(mt_LR_scale),
+         wt = as.numeric(wt)) %>%
+  select(extreme, mt_LR_scale, wt) %>%
+  xtabs(wt ~ extreme + mt_LR_scale, data = .) -> table2
+as.data.frame(prop.table((table2),2)) %>%
+  filter(extreme == 1) %>%
+  mutate(var = "cutsTooFarNational") %>%
+  bind_rows(moderationgraph, .) -> moderationgraph
+
+ggplot(moderationgraph, aes(x = as.numeric(as.character(mt_LR_scale)), y = Freq, colour = var, group = var)) +
+  geom_line() + 
+  xlab('Left-Right') + ylab('Proportion of respondents giving extreme responses') +
+  labs(title = "Do ideological moderates have moderate policy preferences?") +
+  facet_grid(rows = vars(var), scales = "free_y") + MyThemes::theme_base() + 
+  theme(legend.position = "none",
+        panel.spacing = unit(5, "mm", data = NULL))
+
+
+
+########################### Graphs #####
+
+
 
 groupedsummary <- function(varName) {
   BES_wt %>%
@@ -335,9 +426,9 @@ ggsave(filename = "/Users/matteo/Downloads/Centre ground/LA-Questions.pdf",
 
 
 
-###########################
+########################### YouGov #####
 
-## YouGov
+
 
 CANNABIS <- tibble(measure = c(1,2,3,4,NA),
                    proportion = c(20,32,15,17,15)) #https://yougov.co.uk/topics/politics/survey-results/daily/2021/04/06/fcf4a/3
@@ -349,7 +440,7 @@ HOWIMPNATO <- tibble(measure = c(1,2,3,4,NA),
 HOWIMPUNSC <- tibble(measure = c(1,2,3,4,NA),
                      proportion = c(55,24,4,2,16)) #https://d25d2506sfb94s.cloudfront.net/cumulus_uploads/document/0jkjn1d99l/YGC%20GB%20attitudes%20to%20NATO%20%26%20natsec%20Dec%2019.pdf
 HOWIMPWTO <- tibble(measure = c(1,2,3,4,NA),
-                     proportion = c(51,28,2,3,16)) #https://d25d2506sfb94s.cloudfront.net/cumulus_uploads/document/0jkjn1d99l/YGC%20GB%20attitudes%20to%20NATO%20%26%20natsec%20Dec%2019.pdf
+                    proportion = c(51,28,2,3,16)) #https://d25d2506sfb94s.cloudfront.net/cumulus_uploads/document/0jkjn1d99l/YGC%20GB%20attitudes%20to%20NATO%20%26%20natsec%20Dec%2019.pdf
 HOWIMPG20 <- tibble(measure = c(1,2,3,4,NA),
                     proportion = c(39,34,7,2,21)) #https://d25d2506sfb94s.cloudfront.net/cumulus_uploads/document/0jkjn1d99l/YGC%20GB%20attitudes%20to%20NATO%20%26%20natsec%20Dec%2019.pdf
 plots <- vector("list", length = 4)
@@ -362,11 +453,11 @@ grid.arrange(grobs= lapply(plots, "+", theme(plot.margin=margin(10,10,10,10))),
 
 
 FAVRUSSIA <- tibble(measure = c(1,2,3,4,NA),
-                 proportion = c(1,9,34,41,16)) #https://docs.cdn.yougov.com/3ce71typvy/Eurotrack_May21_Topline_Favourability_Israel.pdf
+                    proportion = c(1,9,34,41,16)) #https://docs.cdn.yougov.com/3ce71typvy/Eurotrack_May21_Topline_Favourability_Israel.pdf
 FAVCHINA <- tibble(measure = c(1,2,3,4,NA),
-                    proportion = c(1,11,31,43,14)) #https://docs.cdn.yougov.com/3ce71typvy/Eurotrack_May21_Topline_Favourability_Israel.pdf
+                   proportion = c(1,11,31,43,14)) #https://docs.cdn.yougov.com/3ce71typvy/Eurotrack_May21_Topline_Favourability_Israel.pdf
 FAVIRAN <- tibble(measure = c(1,2,3,4,NA),
-                    proportion = c(1,6,30,42,21)) #https://docs.cdn.yougov.com/3ce71typvy/Eurotrack_May21_Topline_Favourability_Israel.pdf
+                  proportion = c(1,6,30,42,21)) #https://docs.cdn.yougov.com/3ce71typvy/Eurotrack_May21_Topline_Favourability_Israel.pdf
 plots <- vector("list", length = 3)
 greyplot(FAVRUSSIA, "(i) Views of Russia", c(0,44), c(1,4), c("Favourable","Unfavourable")) -> plots[[1]]
 greyplot(FAVCHINA, "(ii) Views of China", c(0,44), c(1,4), c("Favourable","Unfavourable")) -> plots[[2]]
@@ -382,9 +473,9 @@ ggsave(filename = "/Users/matteo/Downloads/Centre ground/Enemies.pdf",
 
 
 NATOSAFE <- tibble(measure = c(1,2,3,NA),
-                  proportion = c(57,16,3,24)) #https://yougov.co.uk/topics/politics/survey-results/daily/2019/12/04/15d13/3
+                   proportion = c(57,16,3,24)) #https://yougov.co.uk/topics/politics/survey-results/daily/2019/12/04/15d13/3
 NATOWEST <- tibble(measure = c(1,2,3,NA),
-                  proportion = c(66,4,6,24)) #https://yougov.co.uk/topics/politics/survey-results/daily/2019/12/04/15d13/2
+                   proportion = c(66,4,6,24)) #https://yougov.co.uk/topics/politics/survey-results/daily/2019/12/04/15d13/2
 SUPNATO <- tibble(measure = c(1,2,3,4,5,NA),
                   proportion = c(37,28,12,2,1,20)) #https://yougov.co.uk/topics/international/survey-results/daily/2019/12/04/15d13/1
 plots <- vector("list", length = 3)
