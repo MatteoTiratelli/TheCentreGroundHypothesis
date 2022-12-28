@@ -76,6 +76,20 @@ BES$mt_taxspend <- (as.numeric(BES$mt_taxspend)-10)*-1
 BES$mt_redistSelf <- ifelse(BES$redistSelf == "Government should try to make incomes equal", 0,
                             ifelse(BES$redistSelf == "Government should be less concerned about equal incomes", 10, BES$redistSelf))
 BES$mt_redistSelf <- as.numeric(BES$mt_redistSelf)
+BES$mt_cutsTooFarNational <- recode(BES$cutsTooFarNational,"Gone much too far" = 1,
+                                    "Gone too far" = 2,
+                                    "About right" = 3,
+                                    "Not gone far enough" = 4,
+                                    "Not gone nearly far enough" = 5,
+                                    "Don't know" = 999)
+BES$mt_cutsTooFarNational <- na_if(BES$mt_cutsTooFarNational, 999)
+BES$mt_cutsTooFarNHS <- recode(BES$cutsTooFarNHS,"Gone much too far" = 1,
+                           "Gone too far" = 2,
+                           "About right" = 3,
+                           "Not gone far enough" = 4,
+                           "Not gone nearly far enough" = 5,
+                           "Don't know" = 999)
+BES$mt_cutsTooFarNHS <- na_if(BES$mt_cutsTooFarNHS, 999)
 BES$mt_deficitReduce <- recode(BES$deficitReduce, "It is completely necessary" = 4,
                                "It is important but not absolutely  necessary" = 3,
                                "It is not necessary but it would be desirable" = 2,
@@ -283,8 +297,8 @@ as.data.frame(prop.table((table2),2)) %>%
 BES %>%
   mutate(cutsTooFarNational = na_if(cutsTooFarNational, "Don't know")) %>%
   mutate(cutsTooFarNational = ifelse(cutsTooFarNational %in% c("Gone much too far",'Not gone nearly far enough'), 2,
-                                ifelse(cutsTooFarNational %in% c('Gone too far','Not gone far enough'), 1,
-                                       ifelse(cutsTooFarNational %in% c('About right'), 0, cutsTooFarNational)))) %>%
+                                     ifelse(cutsTooFarNational %in% c('Gone too far','Not gone far enough'), 1,
+                                            ifelse(cutsTooFarNational %in% c('About right'), 0, cutsTooFarNational)))) %>%
   mutate(extreme = as.numeric(ifelse(as.numeric(cutsTooFarNational) == 2, 1,0)),
          mt_LR_scale = as.numeric(mt_LR_scale),
          wt = as.numeric(wt)) %>%
@@ -369,10 +383,14 @@ grid.arrange(grobs= lapply(plots, "+", theme(plot.margin=margin(10,10,10,10))),
 groupedsummary("mt_taxspend") -> TAXSPEND
 groupedsummary("mt_redistSelf") -> REDIST
 groupedsummary("mt_deficitReduce") -> DEFICIT
-plots <- vector("list", length = 3)
+groupedsummary("mt_cutsTooFarNational") -> CUTSNAT
+groupedsummary("mt_cutsTooFarNHS") -> CUTSNHS
+plots <- vector("list", length = 5)
 greyplot(TAXSPEND, "(i) Government should increase taxes and spending", c(0,0.25), c(0,10), c('Agree','Disagree')) -> plots[[1]]
 greyplot(REDIST, "(ii) Government should try to make incomes equal", c(0,0.25), c(0,10), c('Agree','Disagree')) -> plots[[2]]
 greyplot(DEFICIT, "(iii) Reducing government deficits is...", XBREAKS = c(1,4), XLABS = c('Unnecessary','Necessary')) -> plots[[3]]
+greyplot(CUTSNAT, "(iv) Cuts to national government have gone...", XBREAKS = c(1,5), XLABS = c('Too far','Not far enough')) -> plots[[4]]
+greyplot(CUTSNHS, "(v) Cuts to the NHS have gone...", XBREAKS = c(1,5), XLABS = c('Too far','Not far enough')) -> plots[[5]]
 grid.arrange(grobs= lapply(plots, "+", theme(plot.margin=margin(10,10,10,10))),
              ncol=2) -> SPEND
 
@@ -380,7 +398,7 @@ ggsave(filename = "/Users/matteo/Downloads/Centre ground/Fiscal.pdf",
        plot = SPEND,
        bg = 'transparent',
        family = 'Times',
-       width=8, height=4)
+       width=8, height=6)
 
 
 
