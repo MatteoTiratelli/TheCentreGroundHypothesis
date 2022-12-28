@@ -379,20 +379,16 @@ for (i in 1:5){
 grid.arrange(grobs= lapply(plots, "+", theme(plot.margin=margin(10,10,10,10))),
              nrow=3, ncol=2) -> LRQS
 
-
-groupedsummary("mt_taxspend") -> TAXSPEND
-groupedsummary("mt_redistSelf") -> REDIST
-groupedsummary("mt_deficitReduce") -> DEFICIT
-groupedsummary("mt_cutsTooFarNational") -> CUTSNAT
-groupedsummary("mt_cutsTooFarNHS") -> CUTSNHS
+groupvar <- c("mt_taxspend", "mt_redistSelf", "mt_cutsTooFarNational", "mt_cutsTooFarNHS", "mt_deficitReduce")
+Output <- lapply(groupvar, groupedsummary)
 plots <- vector("list", length = 5)
-greyplot(TAXSPEND, "(i) Government should increase taxes and spending", c(0,0.25), c(0,10), c('Agree','Disagree')) -> plots[[1]]
-greyplot(REDIST, "(ii) Government should try to make incomes equal", c(0,0.25), c(0,10), c('Agree','Disagree')) -> plots[[2]]
-greyplot(DEFICIT, "(iii) Reducing government deficits is...", XBREAKS = c(1,4), XLABS = c('Unnecessary','Necessary')) -> plots[[3]]
-greyplot(CUTSNAT, "(iv) Cuts to national government have gone...", XBREAKS = c(1,5), XLABS = c('Too far','Not far enough')) -> plots[[4]]
-greyplot(CUTSNHS, "(v) Cuts to the NHS have gone...", XBREAKS = c(1,5), XLABS = c('Too far','Not far enough')) -> plots[[5]]
+greyplot(Output[[1]], "(i) Government should increase taxes and spending", c(0,0.25), c(0,10), c('Agree','Disagree')) -> plots[[1]]
+greyplot(Output[[2]], "(ii) Government should try to make incomes equal", c(0,0.25), c(0,10), c('Agree','Disagree')) -> plots[[2]]
+greyplot(Output[[3]], "(iii) Cuts to national government have gone...", XBREAKS = c(1,5), XLABS = c('Too far','Not far enough')) -> plots[[3]]
+greyplot(Output[[4]], "(iv) Cuts to the NHS have gone...", XBREAKS = c(1,5), XLABS = c('Too far','Not far enough')) -> plots[[4]]
+greyplot(Output[[5]], "(v) Reducing government deficits is...", XBREAKS = c(1,4), XLABS = c('Unnecessary','Necessary')) -> plots[[5]]
 grid.arrange(grobs= lapply(plots, "+", theme(plot.margin=margin(10,10,10,10))),
-             ncol=2) -> SPEND
+             nrow=3, ncol=2) -> SPEND
 
 ggsave(filename = "/Users/matteo/Downloads/Centre ground/Fiscal.pdf",
        plot = SPEND,
